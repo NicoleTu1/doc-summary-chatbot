@@ -1,7 +1,10 @@
 streamlit
-openai
+
 langchain
 langchain-community
-langchain-openai
+# openai
+# langchain-openai
+langchain-google-genai
+
 pypdf
 chromadb

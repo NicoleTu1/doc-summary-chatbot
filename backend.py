@@ -3,7 +3,8 @@ from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+# from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def process_document(file_path: str):
@@ -22,8 +23,10 @@ def process_document(file_path: str):
     splits = text_splitter.split_documents(docs)
 
     # 建立 Embedding 與向量資料庫
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+    # embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+    # vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+    embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
+    vectorstore = Chroma.from_documents(documents=splits,embedding=embeddings)
 
     return vectorstore.as_retriever()
 
@@ -33,7 +36,8 @@ def format_docs(docs):
 
 def get_qa_chain(retriever):
     """使用現代 LCEL 建立問答鏈"""
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    # llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash")
     
     # 定義提示詞模板
     prompt = ChatPromptTemplate.from_messages([

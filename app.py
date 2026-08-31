@@ -6,13 +6,15 @@ from backend import get_qa_chain, process_document
 st.set_page_config(page_title="文件摘要與對話機器人", layout="centered")
 st.title("📄 智能文件摘要與對話機器人")
 
-# 設定環境變數或由使用者輸入 OpenAI API Key
+# 設定環境變數或由使用者輸入 API Key
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 os_environ = os.environ
-# if "OPENAI_API_KEY" not in os_environ:
+# if "API_KEY" not in os_environ:
 #     # 也可以透過介面輸入
-#     api_key = st.sidebar.text_input("請輸入 OpenAI API Key", type="password")
+#     api_key = st.sidebar.text_input("請輸入 API Key", type="password")
 #     if api_key:
-#         os.environ["OPENAI_API_KEY"] = api_key
+#         os.environ["API_KEY"] = api_key
 
 # 檔案上傳區塊
 uploaded_file = st.file_uploader("請上傳您的文件 (PDF 或 TXT)", type=["pdf", "txt"])
