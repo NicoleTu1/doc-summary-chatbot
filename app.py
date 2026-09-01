@@ -11,8 +11,6 @@ from backend import get_qa_chain, process_document
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered")
 
-# st.title(TITLE)
-# st.header(TITLE)
 st.markdown("### " + TITLE)
 st.caption(f"embeddings model: {embeddings_model}  \nllm model: {llm_model}")
 
@@ -21,30 +19,18 @@ st.markdown(FOOTER_CSS, unsafe_allow_html=True)
 if "api_checked" not in st.session_state:
     st.session_state.api_checked = False
 if not st.session_state.api_checked:
-    with st.status("正在初始化 API...", expanded=True) as status:
-        try:
-            client = genai.Client()
-            # 實務上最保險的檢查法：僅抓取模型清單，不消耗 Token 成本，用來驗證金鑰是否有效
-            for model in client.models.list(): pass
-            
-            st.toast("API 連線成功！後台狀態正常 🟢", icon="✅")
-        except Exception as e:
-            # 補捉金鑰無效、額度耗盡或網路不通的錯誤
-            st.toast(f"API 連線異常：{str(e)}", icon="⚠️")
+    try:
+        client = genai.Client()
+        # 實務上最保險的檢查法：僅抓取模型清單，不消耗 Token 成本，用來驗證金鑰是否有效
+        for model in client.models.list(): pass
+        
+        st.toast("API 連線成功！後台狀態正常 🟢", icon="✅")
+    except Exception as e:
+        # 補捉金鑰無效、額度耗盡或網路不通的錯誤
+        st.toast(f"API 連線異常：{str(e)}", icon="⚠️")
             
     # 關鍵：標記為已檢查，避免網頁後續重新整理時重複彈出
     st.session_state.api_checked = True
-
-
-
-
-# 設定環境變數或由使用者輸入 API Key
-# api_type = "GOOGLE_API_KEY" # OPENAI_API_KEY
-# api_key = os.getenv(api_type)
-# if not api_key:
-#     api_key = st.secrets[api_type]
-# 也可以透過介面輸入
-# api_key = st.sidebar.text_input("請輸入 API Key", type="password")
 
 
 # 檔案上傳區塊

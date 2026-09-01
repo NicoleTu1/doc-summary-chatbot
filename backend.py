@@ -3,7 +3,8 @@ from operator import itemgetter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains import create_history_aware_retriever
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -40,11 +41,16 @@ def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 def get_qa_chain(retriever):
-    """使用現代 LCEL 建立問答鏈"""
-    # llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    """
+    使用現代 LCEL 建立問答鏈
+    LCEL (LangChain Expression Language) 是 LangChain 推出的一套宣告式（Declarative）語法，
+    專門用來將 AI 開發中的各種元件（如提示詞、大型語言模型、檢索器、輸出解析器）串接成一條完整的處理管線（Pipeline）。
+    """
     llm = ChatGoogleGenerativeAI(model=llm_model)
     
     # 定義提示詞模板
+    # 建立一個結構化的對話提示詞模板（Chat Prompt Template），
+    # 專門用於 RAG（檢索增強生成）架構中，以規範大型語言模型（LLM）的回答行為。
     prompt = ChatPromptTemplate.from_messages([
         (
             "system", 
@@ -60,6 +66,7 @@ def get_qa_chain(retriever):
     # 2. 同時保留原本的 "input" 傳給提示詞模板
     # 3. 依序通過 prompt、llm 與 StrOutputParser（將輸出轉為純字串）
     rag_chain = (
+        # ↓ LCEL 採用了類似 Linux 管道（Pipe）的 | 運算子。前一個元件的輸出會自動變成後一個元件的輸入。
         {
             "context": itemgetter("input") | retriever | format_docs,
             "input": itemgetter("input")
