@@ -21,8 +21,8 @@ footer_css = """
     color: var(--text-color);
     
     text-align: center;
-    padding: 0px 0px 0px 0px; /* 調整頁尾的內邊距: 上右下左 */
-    font-size: 12px;
+    padding: 8px 8px 8px 8px; /* 調整頁尾的內邊距: 上右下左 */
+    font-size: 14px;
     z-index: 999;   /* 讓頁尾置於最上層 */
     
     border-top: 1px solid rgba(190, 190, 190, 0.5); 
