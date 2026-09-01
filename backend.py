@@ -4,15 +4,21 @@ from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-# from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from pathlib import Path
+
+from app_config import embeddings_model, llm_model
+
+
+
 def process_document(file_path: str):
     """處理檔案：載入、切塊並建立向量資料庫與檢索器"""
-    if file_path.endswith(".pdf"):
+    file_extension = Path(file_path).suffix.lower()
+    if file_extension == ".pdf":
         loader = PyPDFLoader(file_path)
-    elif file_path.endswith(".txt"):
+    elif file_extension == ".txt":
         loader = TextLoader(file_path, encoding="utf-8")
     else:
         raise ValueError("目前僅支援 PDF 與 TXT 檔案")
@@ -24,9 +30,7 @@ def process_document(file_path: str):
     splits = text_splitter.split_documents(docs)
 
     # 建立 Embedding 與向量資料庫
-    # embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    # vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
-    embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model=embeddings_model)
     vectorstore = Chroma.from_documents(documents=splits,embedding=embeddings)
 
     return vectorstore.as_retriever()
@@ -38,7 +42,7 @@ def format_docs(docs):
 def get_qa_chain(retriever):
     """使用現代 LCEL 建立問答鏈"""
     # llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash")
+    llm = ChatGoogleGenerativeAI(model=llm_model)
     
     # 定義提示詞模板
     prompt = ChatPromptTemplate.from_messages([

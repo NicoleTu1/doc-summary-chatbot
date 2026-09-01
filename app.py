@@ -1,52 +1,48 @@
 import tempfile
 import streamlit as st
+
+from google import genai
+
 import os
+import time
+
+from app_config import PAGE_TITLE, PAGE_ICON, TITLE, FOOTER_CSS, embeddings_model, llm_model
 from backend import get_qa_chain, process_document
 
-st.set_page_config(page_title="文件摘要與對話機器人 | Nicole", layout="centered")
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered")
 
-# st.title("📄 文件摘要與對話機器人")
-# st.header("📄 文件摘要與對話機器人")
-st.markdown("### 📄 文件摘要與對話機器人")
+# st.title(TITLE)
+# st.header(TITLE)
+st.markdown("### " + TITLE)
+st.caption(f"embeddings model: {embeddings_model}  \nllm model: {llm_model}")
 
-footer_css = """
-<style>
-.custom-footer {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    
-    background-color: var(--background-color); 
-    color: var(--text-color);
-    
-    text-align: center;
-    padding: 8px 8px 8px 8px; /* 調整頁尾的內邊距: 上右下左 */
-    font-size: 14px;
-    z-index: 999;   /* 讓頁尾置於最上層 */
-    
-    border-top: 1px solid rgba(190, 190, 190, 0.5); 
-}
-.custom-footer a {
-    /* link color */
-    color: var(--primary-color); 
-    text-decoration: none;
-}
-</style>
-<div class="custom-footer">
-    Made by <b>Nicole</b> | nicoletuatie@gmail.com
-    <!-- <a href="https://linkedin.com" target="_blank">LinkedIn</a> -->
-</div>
-"""
-# 3. 渲染頁尾（必須設定 allow_html=True）
-st.markdown(footer_css, unsafe_allow_html=True)
+st.markdown(FOOTER_CSS, unsafe_allow_html=True)
+
+if "api_checked" not in st.session_state:
+    st.session_state.api_checked = False
+if not st.session_state.api_checked:
+    with st.status("正在初始化 API...", expanded=True) as status:
+        try:
+            client = genai.Client()
+            # 實務上最保險的檢查法：僅抓取模型清單，不消耗 Token 成本，用來驗證金鑰是否有效
+            for model in client.models.list(): pass
+            
+            st.toast("API 連線成功！後台狀態正常 🟢", icon="✅")
+        except Exception as e:
+            # 補捉金鑰無效、額度耗盡或網路不通的錯誤
+            st.toast(f"API 連線異常：{str(e)}", icon="⚠️")
+            
+    # 關鍵：標記為已檢查，避免網頁後續重新整理時重複彈出
+    st.session_state.api_checked = True
+
+
 
 
 # 設定環境變數或由使用者輸入 API Key
-api_type = "GOOGLE_API_KEY" # OPENAI_API_KEY
-api_key = os.getenv(api_type)
-if not api_key:
-    api_key = st.secrets[api_type]
+# api_type = "GOOGLE_API_KEY" # OPENAI_API_KEY
+# api_key = os.getenv(api_type)
+# if not api_key:
+#     api_key = st.secrets[api_type]
 # 也可以透過介面輸入
 # api_key = st.sidebar.text_input("請輸入 API Key", type="password")
 
