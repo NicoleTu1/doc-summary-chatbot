@@ -3,25 +3,64 @@ import streamlit as st
 import os
 from backend import get_qa_chain, process_document
 
-st.set_page_config(page_title="文件摘要與對話機器人", layout="centered")
-st.title("📄 智能文件摘要與對話機器人")
+st.set_page_config(page_title="文件摘要與對話機器人 | Nicole", layout="centered")
+
+# st.title("📄 文件摘要與對話機器人")
+# st.header("📄 文件摘要與對話機器人")
+st.markdown("### 📄 文件摘要與對話機器人")
+
+footer_css = """
+<style>
+.custom-footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    
+    background-color: var(--background-color); 
+    color: var(--text-color);
+    
+    text-align: center;
+    padding: 0px 0px 0px 0px; /* 調整頁尾的內邊距: 上右下左 */
+    font-size: 12px;
+    z-index: 999;   /* 讓頁尾置於最上層 */
+    
+    border-top: 1px solid rgba(190, 190, 190, 0.5); 
+}
+.custom-footer a {
+    /* link color */
+    color: var(--primary-color); 
+    text-decoration: none;
+}
+</style>
+<div class="custom-footer">
+    Made by <b>Nicole</b> | nicoletuatie@gmail.com
+    <!-- <a href="https://linkedin.com" target="_blank">LinkedIn</a> -->
+</div>
+"""
+# 3. 渲染頁尾（必須設定 allow_html=True）
+st.markdown(footer_css, unsafe_allow_html=True)
+
 
 # 設定環境變數或由使用者輸入 API Key
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-os_environ = os.environ
-# if "API_KEY" not in os_environ:
-#     # 也可以透過介面輸入
-#     api_key = st.sidebar.text_input("請輸入 API Key", type="password")
-#     if api_key:
-#         os.environ["API_KEY"] = api_key
+api_type = "GOOGLE_API_KEY" # OPENAI_API_KEY
+api_key = os.getenv(api_type)
+if not api_key:
+    api_key = st.secrets[api_type]
+# 也可以透過介面輸入
+# api_key = st.sidebar.text_input("請輸入 API Key", type="password")
+
 
 # 檔案上傳區塊
-uploaded_file = st.file_uploader("請上傳您的文件 (PDF 或 TXT)", type=["pdf", "txt"])
+uploaded_file = st.file_uploader("請上傳想摘要的文件 (PDF 或 TXT)", 
+                                 type=["pdf", "txt"], 
+                                 help="⚠️ 請勿上傳敏感資料 ⚠️ \n此網頁僅作示範用途，若 API 使用額度耗盡，會造成無法使用摘要與對話功能。")
 
 if uploaded_file is not None:
     # 將上傳的檔案寫入暫存檔供 LangChain 讀取
+    # 為了後面能使用 process_document(), 而該函式需要檔案路徑作為參數, 因此這裡使用 tempfile 產生暫存檔, 才能產生路徑.
     with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{uploaded_file.name}") as tmp_file:
+        # ↑ delete=False 代表離開 with 區塊後，不要自動刪除這個暫存檔。
         tmp_file.write(uploaded_file.getvalue())
         tmp_file_path = tmp_file.name
 
