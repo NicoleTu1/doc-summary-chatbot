@@ -3,11 +3,11 @@ import streamlit as st
 
 from google import genai
 
-import os
-import time
+# import os
+# import time
 
 from app_config import PAGE_TITLE, PAGE_ICON, TITLE, FOOTER_CSS, embeddings_model, llm_model
-from backend import get_qa_chain, process_document
+from backend import build_message_history, get_qa_chain, process_document
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered")
 
@@ -24,10 +24,17 @@ if not st.session_state.api_checked:
         # 實務上最保險的檢查法：僅抓取模型清單，不消耗 Token 成本，用來驗證金鑰是否有效
         for model in client.models.list(): pass
         
-        st.toast("API 連線成功！後台狀態正常 🟢", icon="✅")
+        st.toast("API 連線成功！後台狀態正常 ", icon="✅")
     except Exception as e:
         # 補捉金鑰無效、額度耗盡或網路不通的錯誤
-        st.toast(f"API 連線異常：{str(e)}", icon="⚠️")
+        if e == genai.exceptions.AuthenticationError:
+            st.toast("API 金鑰無效或已過期，請檢查環境變數或 .env 設定", icon="⚠️")
+        elif e == genai.exceptions.QuotaExceededError:
+            st.toast("API 額度已耗盡，請檢查 Google Cloud Console 的使用狀況", icon="⚠️")
+        elif e == genai.exceptions.ResourceExhaustedError:
+            st.toast("目前使用量較高，請稍候後再試。", icon="⚠️")
+        else:
+            st.toast(f"API 連線異常：{str(e)}", icon="⚠️")
             
     # 關鍵：標記為已檢查，避免網頁後續重新整理時重複彈出
     st.session_state.api_checked = True
@@ -74,7 +81,10 @@ if prompt := st.chat_input("請輸入您對文件的問題..."):
 
         with st.chat_message("assistant"):
             with st.spinner("機器人思考中..."):
-                # 直接呼叫 LCEL 鏈，回傳結果即為解答字串
-                answer = st.session_state.qa_chain.invoke({"input": prompt})
+                chat_history = build_message_history(st.session_state.messages[:-1])
+                answer = st.session_state.qa_chain.invoke({
+                    "input": prompt,
+                    "chat_history": chat_history,
+                })
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})

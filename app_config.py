@@ -40,7 +40,7 @@ FOOTER_CSS = """
 }
 </style>
 <div class="custom-footer">
-    Made by Streamlit | <b>Nicole</b> ‧ nicoletuatie@gmail.com
+    Built with Streamlit ‧ Created by <b>Nicole</b> ‧ nicoletuatie@gmail.com
     <!-- <a href="https://linkedin.com" target="_blank">LinkedIn</a> -->
 </div>
 """
