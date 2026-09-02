@@ -1,5 +1,7 @@
 # custom
-_test.ipynb
+.vscode/
+tests/
+_test.*
 .env
 .streamlit/secrets.toml
 

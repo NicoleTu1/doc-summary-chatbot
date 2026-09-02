@@ -1,27 +1,55 @@
 import tempfile
 import streamlit as st
-import os
-from backend import get_qa_chain, process_document
 
-st.set_page_config(page_title="文件摘要與對話機器人", layout="centered")
-st.title("📄 智能文件摘要與對話機器人")
+from google import genai
 
-# 設定環境變數或由使用者輸入 API Key
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-os_environ = os.environ
-# if "API_KEY" not in os_environ:
-#     # 也可以透過介面輸入
-#     api_key = st.sidebar.text_input("請輸入 API Key", type="password")
-#     if api_key:
-#         os.environ["API_KEY"] = api_key
+# import os
+# import time
+
+from app_config import PAGE_TITLE, PAGE_ICON, TITLE, FOOTER_CSS, embeddings_model, llm_model
+from backend import build_message_history, get_qa_chain, process_document
+
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered")
+
+st.markdown("### " + TITLE)
+st.caption(f"embeddings model: {embeddings_model}  \nllm model: {llm_model}")
+
+st.markdown(FOOTER_CSS, unsafe_allow_html=True)
+
+if "api_checked" not in st.session_state:
+    st.session_state.api_checked = False
+if not st.session_state.api_checked:
+    try:
+        client = genai.Client()
+        # 實務上最保險的檢查法：僅抓取模型清單，不消耗 Token 成本，用來驗證金鑰是否有效
+        for model in client.models.list(): pass
+        
+        st.toast("API 連線成功！後台狀態正常 ", icon="✅")
+    except Exception as e:
+        # 補捉金鑰無效、額度耗盡或網路不通的錯誤
+        if e == genai.exceptions.AuthenticationError:
+            st.toast("API 金鑰無效或已過期，請檢查環境變數或 .env 設定", icon="⚠️")
+        elif e == genai.exceptions.QuotaExceededError:
+            st.toast("API 額度已耗盡，請檢查 Google Cloud Console 的使用狀況", icon="⚠️")
+        elif e == genai.exceptions.ResourceExhaustedError:
+            st.toast("目前使用量較高，請稍候後再試。", icon="⚠️")
+        else:
+            st.toast(f"API 連線異常：{str(e)}", icon="⚠️")
+            
+    # 關鍵：標記為已檢查，避免網頁後續重新整理時重複彈出
+    st.session_state.api_checked = True
+
 
 # 檔案上傳區塊
-uploaded_file = st.file_uploader("請上傳您的文件 (PDF 或 TXT)", type=["pdf", "txt"])
+uploaded_file = st.file_uploader("請上傳想摘要的文件 (PDF 或 TXT)", 
+                                 type=["pdf", "txt"], 
+                                 help="⚠️ 請勿上傳敏感資料 ⚠️ \n此網頁僅作示範用途，若 API 使用額度耗盡，會造成無法使用摘要與對話功能。")
 
 if uploaded_file is not None:
     # 將上傳的檔案寫入暫存檔供 LangChain 讀取
+    # 為了後面能使用 process_document(), 而該函式需要檔案路徑作為參數, 因此這裡使用 tempfile 產生暫存檔, 才能產生路徑.
     with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{uploaded_file.name}") as tmp_file:
+        # ↑ delete=False 代表離開 with 區塊後，不要自動刪除這個暫存檔。
         tmp_file.write(uploaded_file.getvalue())
         tmp_file_path = tmp_file.name
 
@@ -53,7 +81,10 @@ if prompt := st.chat_input("請輸入您對文件的問題..."):
 
         with st.chat_message("assistant"):
             with st.spinner("機器人思考中..."):
-                # 直接呼叫 LCEL 鏈，回傳結果即為解答字串
-                answer = st.session_state.qa_chain.invoke({"input": prompt})
+                chat_history = build_message_history(st.session_state.messages[:-1])
+                answer = st.session_state.qa_chain.invoke({
+                    "input": prompt,
+                    "chat_history": chat_history,
+                })
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})

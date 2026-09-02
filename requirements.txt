@@ -8,3 +8,4 @@ langchain-google-genai
 
 pypdf
 chromadb
+python-dotenv
