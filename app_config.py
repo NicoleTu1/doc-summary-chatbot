@@ -4,10 +4,6 @@ from dotenv import load_dotenv
 # from pathlib import Path
 
 
-embeddings_model = "gemini-embedding-001"
-llm_model = "gemini-3.6-flash" # "gemini-3.6-flash"
-
-
 
 # 網頁基本設定
 PAGE_TITLE = "文件摘要與對話機器人 | Nicole"
