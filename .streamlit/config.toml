@@ -1,0 +1,17 @@
+[theme]
+# 指定預設啟動時的基底主題 ("dark" 或 "light")
+base = "dark"
+
+# --- 專屬自訂：亮色模式 (Light Mode) ---
+[theme.light]
+primaryColor = "#2563EB"          # 皇家藍
+backgroundColor = "#EEEEEE"       # 淺灰主畫面
+secondaryBackgroundColor = "#F3F4F6" # 淺灰側邊欄
+textColor = "#1F2937"             # 深灰黑文字
+
+# --- 專屬自訂：暗色模式 (Dark Mode) ---
+[theme.dark]
+primaryColor = "#3B82F6"          # 亮藍色
+backgroundColor = "#0F172A"       # 深石板藍主畫面
+secondaryBackgroundColor = "#1E293B" # 稍淺深藍灰側邊欄
+textColor = "#F8FAFC"             # 柔和白文字

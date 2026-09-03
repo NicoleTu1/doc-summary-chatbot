@@ -4,40 +4,69 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableLambda
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.runnables import RunnableLambda
+from markdown_it import MarkdownIt
 
 import re
-from pathlib import Path
-from operator import itemgetter
 import os
+from operator import itemgetter
+from pathlib import Path
 
 
+MARKDOWN = MarkdownIt()
+
+
+
+def _get_loader(file_path: Path):
+    if file_path.suffix.lower() == ".pdf":
+        return PyPDFLoader(file_path)
+    if file_path.suffix.lower() in {".txt", ".md"}:
+        return TextLoader(file_path, encoding="utf-8")
+    raise ValueError("不支援你所上傳的檔案類型，請上傳 PDF、TXT 或 MD 檔案。")
+
+
+def md_to_text(text: str) -> str:
+    """將 Markdown 內容轉成適合在引用區塊顯示的純文字。"""
+    return "\n".join(token.content for token in MARKDOWN.parse(text) if token.type == "inline")
+
+
+def convert_file_to_text(file_path: Path):
+    """將上傳的檔案轉成純文字，支援 PDF、TXT、MD"""
+    file_extension = file_path.suffix.lower()
+    docs = _get_loader(file_path).load()
+    plain_text = "\n\n".join(doc.page_content for doc in docs)
+    text_lang = "markdown" if file_extension == ".md" else "text"
+    return plain_text, text_lang
 
 def process_document(file_path: str):
     """處理檔案：載入、切塊並建立向量資料庫與檢索器"""
-    file_extension = Path(file_path).suffix.lower()
-    if file_extension == ".pdf":
-        loader = PyPDFLoader(file_path)
-    elif file_extension == ".txt":
-        loader = TextLoader(file_path, encoding="utf-8")
-    elif file_extension == ".md":
-        loader = TextLoader(file_path, encoding="utf-8")
-    else:
-        raise ValueError("不支援你所上傳的檔案類型，請上傳 PDF、TXT 或 MD 檔案。")
-
-    docs = loader.load()
+    docs = _get_loader(Path(file_path)).load()
     
     # 進行文件切塊 (chunking)
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=60)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     splits = text_splitter.split_documents(docs)
 
     # 建立 Embedding 與向量資料庫
     embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv('embeddings_model'))
-    vectorstore = Chroma.from_documents(documents=splits,embedding=embeddings)
+    vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
 
     return vectorstore.as_retriever()
+
+
+def release_retriever(retriever):
+    """刪除 retriever 所持有的 ephemeral Chroma collection。"""
+    if retriever is None:
+        return
+
+    vectorstore = getattr(retriever, "vectorstore", None)
+    delete_collection = getattr(vectorstore, "delete_collection", None)
+    if callable(delete_collection):
+        try:
+            delete_collection()
+        except Exception:
+            pass
 
 def format_docs(docs):
     """將檢索到的文件內容物件串接成純文字"""
@@ -62,7 +91,7 @@ def build_citation_index(source_docs: list):
 
     for doc in source_docs:
         source_name = doc.metadata.get("source") or doc.metadata.get("file_name") or "unknown"
-        source_name = Path(source_name).name    # 原本 source_name 是路徑, 只取最後一個檔名作為來源名稱
+        # source_name = Path(source_name).name    # 原本 source_name 是路徑, 只取最後一個檔名作為來源名稱
         if source_name not in source_to_idx:
             source_to_idx[source_name] = len(source_order) + 1
             source_order.append({
